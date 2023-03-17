@@ -1,3 +1,5 @@
+![](https://github.com/rikodot/binja_native_sigscan/preview.gif)
+
 ### Functional improvements against [Binary Ninja python sigmaker plugin](https://github.com/apekros/binja_sigmaker):
 - signature finding:
   - lighting fast
