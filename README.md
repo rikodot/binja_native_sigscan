@@ -37,10 +37,10 @@
 ### Build process
 1. head to the binja api link you can find in `C:\Program Files\Vector35\BinaryNinja\api_REVISION.txt` (in my case, at the time of creating this repository, it is `https://github.com/Vector35/binaryninja-api/tree/919384bb2bb9216e000750a00793549ef7a46d87`)
 2. download repository as a zip (click green 'Code' button and hit 'Download ZIP')
-3. put wherever you want and extract
-4. open cmd and use following commands to clone this repository into examples folder and use cmake to create Visual Studio project
+3. put wherever you want and extract it
+4. open cmd, navigate into the newly created folder and use following commands to clone this repository into examples folder and use cmake to create Visual Studio project
 ```bash
-cd binaryninja-api\examples\
+cd examples\
 git clone https://github.com/rikodot/binja_native_sigscan
 cd binja_native_sigscan
 cmake -S . -B build
