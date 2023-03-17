@@ -35,7 +35,7 @@
   3. signature is written into the log bar as well as copied directly to the clipboard, if you want to copy previously created signature, simply find it in the log bar, right click it and hit copy to avoid recreating it
 
 ### Build process
-1. head to the binja api link you can find in `C:\Program Files\Vector35\BinaryNinja\api_REVISION.txt` (in my case, at the time of creating this repository it is `https://github.com/Vector35/binaryninja-api/tree/919384bb2bb9216e000750a00793549ef7a46d87`)
+1. head to the binja api link you can find in `C:\Program Files\Vector35\BinaryNinja\api_REVISION.txt` (in my case, at the time of creating this repository, it is `https://github.com/Vector35/binaryninja-api/tree/919384bb2bb9216e000750a00793549ef7a46d87`)
 2. download repository as a zip (click green 'Code' button and hit 'Download ZIP')
 3. put wherever you want and extract
 4. open cmd
