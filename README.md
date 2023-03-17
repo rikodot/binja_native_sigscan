@@ -47,7 +47,7 @@ cmake -S . -B build
 ```
 5. launch newly generated Visual Studio .sln project located in (...\binaryninja-api\examples\binja_native_sigscan\build\)
 6. build project
-7. to load the plugin, copy compiled dll into the plugins folder (in previously opened cmd execute `copy ".\build\Release\binja_native_sigscan.dll" "%appdata%\Binary Ninja\plugins\binja_native_sigscan.dll"`)
+7. to load the plugin, copy compiled dll into the plugins folder (in previously opened cmd execute `copy ".\build\Release\sigscan.dll" "%appdata%\Binary Ninja\plugins\sigscan.dll"`)
 
 ### Known issues
 - tested only on windows x64 binaries
