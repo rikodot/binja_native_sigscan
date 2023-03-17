@@ -53,7 +53,7 @@ cmake -S . -B build
 - tested only on windows x64 binaries
 - code is designed only for windows
 - if a code signature is present in the clipboard and the 'find norm signature' process is executed, Binary Ninja will freeze and crash, potentially caused by an infinite loop, similar issue may also occur in various other scenarios
-- creating signature from hex editor view within the main frame most likely causes crash as partial instructions might be selected
+- creating signature from `Hex Editor` view within the main frame most likely causes crash as partial instructions might be selected
 
 ### Backstory
 I have been using IDA for majority of my reverse engineering career and recently decided to switch to Binary Ninja. I work with signatures on daily basis and this plugin is a must for me. Although there already is a community plugin for the exact same purpose, it is frankly unusable for binaries over 50KB in size as it is incredibly slow and on top of that contains two bugs causing creation of signatures with wrongly placed wild bytes resulting in signatures not being compatible with different compilations of the same binary. I still want to note that the python version was a nice resource in creation of this version.
