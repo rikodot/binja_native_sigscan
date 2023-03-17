@@ -38,17 +38,16 @@
 1. head to the binja api link you can find in `C:\Program Files\Vector35\BinaryNinja\api_REVISION.txt` (in my case, at the time of creating this repository, it is `https://github.com/Vector35/binaryninja-api/tree/919384bb2bb9216e000750a00793549ef7a46d87`)
 2. download repository as a zip (click green 'Code' button and hit 'Download ZIP')
 3. put wherever you want and extract
-4. open cmd
-5. clone this plugin into examples folder and use cmake to create Visual Studio project
+4. open cmd and use following commands to clone this repository into examples folder and use cmake to create Visual Studio project
 ```bash
 cd binaryninja-api\examples\
 git clone https://github.com/rikodot/binja_native_sigscan
 cd binja_native_sigscan
 cmake -S . -B build
 ```
-6. launch newly generated Visual Studio .sln project located in (...\binaryninja-api\examples\binja_native_sigscan\build\)
-7. build project
-8. to load the plugin, copy compiled dll into the plugins folder (in previously opened cmd execute copy `".\build\Release\binja_native_sigscan.dll" "%appdata%\Binary Ninja\plugins\binja_native_sigscan.dll"`)
+5. launch newly generated Visual Studio .sln project located in (...\binaryninja-api\examples\binja_native_sigscan\build\)
+6. build project
+7. to load the plugin, copy compiled dll into the plugins folder (in previously opened cmd execute `copy ".\build\Release\binja_native_sigscan.dll" "%appdata%\Binary Ninja\plugins\binja_native_sigscan.dll"`)
 
 ### Known issues
 - tested only on windows x64 binaries
