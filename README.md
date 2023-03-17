@@ -26,7 +26,7 @@
 ### Usage
 - first copy compiled plugin into the plugins folder (`%appdata%\Binary Ninja\plugins\`)
 - finding signatures:
- 1. copy target signature into clipboard - can be both normal signature (e.g. `49 28 15 ? ? 30`) or a code signature (e.g. `"\x49\x28\x15\x00\x00\x30", "xxx??x"`)
+  1. copy target signature into clipboard - can be both normal signature (e.g. `49 28 15 ? ? 30`) or a code signature (e.g. `"\x49\x28\x15\x00\x00\x30", "xxx??x"`)
   2. right click into the main frame or use topbar navigation `Plugins->Find <type> sig from clipboard`
   3. all hits will be written into the log bar along with their addresses, simply click on a green highlited address to follow it
 - creating signatures
