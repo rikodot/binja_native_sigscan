@@ -235,7 +235,7 @@ std::string exctract_sig(std::string str, sig_types type)
 	if (type == NORM)
 	{
 		// should work on stuff like:
-		//"48 89 5c 24 08 ? 9a
+		// "48 89 5c 24 08 ? 9a
 		// 48 89 5C 24 08 ?? 9A'
 		bool have_byte = false;
 		for (auto& c : str)
