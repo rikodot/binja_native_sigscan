@@ -443,15 +443,15 @@ extern "C"
 		        size_t inst_len = view->GetInstructionLength(func->GetArchitecture(), start);
 		        Log(InfoLog, "inst_len: %d", inst_len);
 		    });*/
-		PluginCommand::RegisterForRange("Create NORM sig from range", "Create SIGNATURE IN FORMAT '49 28 15 ? ? 30'.",
+		PluginCommand::RegisterForRange("Native SigScan\\Create NORM sig from range", "Create SIGNATURE IN FORMAT '49 28 15 ? ? 30'.",
 			[](BinaryView* view, uint64_t start, uint64_t length) { create_sig(view, start, length, NORM); });
-		PluginCommand::RegisterForRange("Create CODE sig from range",
+		PluginCommand::RegisterForRange("Native SigScan\\Create CODE sig from range",
 			"Create SIGNATURE IN FORMAT '\"\\x49\\x28\\x15\\x00\\x00\\x30\", \"xxx??x\"'.",
 			[](BinaryView* view, uint64_t start, uint64_t length) { create_sig(view, start, length, CODE); });
-		PluginCommand::Register("Find NORM sig from clipboard",
+		PluginCommand::Register("Native SigScan\\Find NORM sig from clipboard",
 			"Find SIGNATURE in current binary (FORMAT '49 28 15 ? ? 30').",
 			[](BinaryView* view) { find_sig(view, NORM); });
-		PluginCommand::Register("Find CODE sig from clipboard",
+		PluginCommand::Register("Native SigScan\\Find CODE sig from clipboard",
 			"Find SIGNATURE in current binary (FORMAT '\"\\x49\\x28\\x15\\x00\\x00\\x30\", \"xxx??x\"').",
 			[](BinaryView* view) { find_sig(view, CODE); });
 
