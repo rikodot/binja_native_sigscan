@@ -1,4 +1,4 @@
-![](https://github.com/rikodot/binja_native_sigscan/blob/main/preview.gif)
+![preview](https://github.com/rikodot/binja_native_sigscan/blob/main/preview.gif)
 
 ### Functional improvements against [Binary Ninja python sigmaker plugin](https://github.com/apekros/binja_sigmaker):
 - signature finding:
