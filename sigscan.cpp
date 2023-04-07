@@ -89,6 +89,7 @@ void instruction_to_sig(BinaryView* bv, uint64_t addr, size_t inst_length, std::
 	}
 }
 
+#ifdef WIN32
 std::string get_clipboard_text()
 {
 	if (!::OpenClipboard(nullptr))
@@ -169,6 +170,7 @@ bool set_clipboard_text(const std::string& text)
 	::CloseClipboard();
 	return true;
 }
+#endif
 
 enum sig_types
 {
@@ -223,10 +225,12 @@ void create_sig(BinaryView* view, uint64_t start, uint64_t length, sig_types typ
 	}
 
 	Log(InfoLog, "%s", pattern.c_str());
+#ifdef WIN32
 	if (!set_clipboard_text(pattern))
 	{
 		LogError("Failed to copy sig to clipboard");
 	}
+#endif
 }
 
 std::string exctract_sig(std::string str, sig_types type)
@@ -325,18 +329,24 @@ std::string exctract_sig(std::string str, sig_types type)
 
 void find_sig(BinaryView* view, sig_types type)
 {
-	const std::string clipboard_data = get_clipboard_text();
-	if (clipboard_data.empty())
+	std::string input_data /*= get_clipboard_text()*/;
+	if (!GetTextLineInput(input_data, "Enter signature to find", "Native SigScan"))
 	{
-		Log(ErrorLog, "CLIPBOARD DOES NOT CONTAIN ANY TEXT");
+		Log(ErrorLog, "FAILED TO GRAB INPUT");
 		return;
 	}
-	// Log(InfoLog, "clipboard_data: %s", clipboard_data.c_str());
 
-	const std::string sig = exctract_sig(clipboard_data, type);
+	if (input_data.empty())
+	{
+		Log(ErrorLog, "INPUT DOES NOT CONTAIN ANY TEXT");
+		return;
+	}
+	// Log(InfoLog, "input_data: %s", input_data.c_str());
+
+	const std::string sig = exctract_sig(input_data, type);
 	if (sig.empty())
 	{
-		Log(ErrorLog, "CLIPBOARD DOES NOT CONTAIN VALID SIG");
+		Log(ErrorLog, "INPUT IS NOT VALID SIG");
 	}
 	// Log(InfoLog, "sig: %s", sig.c_str());
 
@@ -401,60 +411,19 @@ extern "C"
 
 	BINARYNINJAPLUGIN bool CorePluginInit()
 	{
-		/*PluginCommand::RegisterForRange("NATIVE SIG SCAN TEST", "JUST A TEST",
-		    [](BinaryView* view, uint64_t start, uint64_t length) {
-		        Log(InfoLog, "------------------");
-		        auto func = view->GetAnalysisFunctionsContainingAddress(start)[0];
-		        auto const_ref = func->GetConstantsReferencedByInstruction(func->GetArchitecture(), start);
-		        for (auto& x : const_ref)
-		        {
-		            Log(InfoLog, "const_ref: %llx", x.value);
-		        }
-
-		        BinaryNinja::ReferenceSource curr {func, func->GetArchitecture(), start};
-		        auto callees = view->GetCallees(curr);
-		        for (auto& x : callees)
-		        {
-		            Log(InfoLog, "callee: %llx", x);
-		        }
-
-		        auto cref = view->GetCodeReferences(start);
-		        for (auto& x : cref)
-		        {
-		            Log(InfoLog, "[CALL FROM OUTSIDE TO HERE] cref: %llx", x.addr);
-		        }
-		        auto dref = view->GetDataReferences(start);
-		        for (auto& x : cref)
-		        {
-		            Log(InfoLog, "[CALL FROM OUTSIDE TO HERE] dref: %llx", x.addr);
-		        }
-
-		        auto cref1 = view->GetCodeReferencesFrom(curr);
-		        for (auto& x : cref1)
-		        {
-		            Log(InfoLog, "[CALL FROM HERE TO OUTSIDE] cref: %llx", x);
-		        }
-		        auto dref1 = view->GetDataReferencesFrom(start);
-		        for (auto& x : dref1)
-		        {
-		            Log(InfoLog, "[CALL FROM HERE TO OUTSIDE] dref: %llx", x);
-		        }
-
-		        size_t inst_len = view->GetInstructionLength(func->GetArchitecture(), start);
-		        Log(InfoLog, "inst_len: %d", inst_len);
-		    });*/
-		PluginCommand::RegisterForRange("Native SigScan\\Create NORM sig from range", "Create SIGNATURE IN FORMAT '49 28 15 ? ? 30'.",
+		PluginCommand::RegisterForRange("Native SigScan\\Create NORM sig from range",
+			"Create SIGNATURE IN FORMAT '49 28 15 ? ? 30'.",
 			[](BinaryView* view, uint64_t start, uint64_t length) { create_sig(view, start, length, NORM); });
 		PluginCommand::RegisterForRange("Native SigScan\\Create CODE sig from range",
 			"Create SIGNATURE IN FORMAT '\"\\x49\\x28\\x15\\x00\\x00\\x30\", \"xxx??x\"'.",
 			[](BinaryView* view, uint64_t start, uint64_t length) { create_sig(view, start, length, CODE); });
-		PluginCommand::Register("Native SigScan\\Find NORM sig from clipboard",
+		PluginCommand::Register("Native SigScan\\Find NORM sig",
 			"Find SIGNATURE in current binary (FORMAT '49 28 15 ? ? 30').",
 			[](BinaryView* view) { find_sig(view, NORM); });
-		PluginCommand::Register("Native SigScan\\Find CODE sig from clipboard",
+		PluginCommand::Register("Native SigScan\\Find CODE sig",
 			"Find SIGNATURE in current binary (FORMAT '\"\\x49\\x28\\x15\\x00\\x00\\x30\", \"xxx??x\"').",
 			[](BinaryView* view) { find_sig(view, CODE); });
-
+		
 		Log(InfoLog, "BINJA NATIVE SIGSCAN LOADED");
 		return true;
 	}
