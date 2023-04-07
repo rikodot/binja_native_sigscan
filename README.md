@@ -1,8 +1,8 @@
-![preview](https://github.com/rikodot/binja_native_sigscan/blob/main/preview.gif)
+<img alt="preview" src="https://github.com/rikodot/binja_native_sigscan/blob/main/preview.gif" width="800">
 
 ### Plugin now available in Binary Ninja's plugin manager
 (allows to receive updates automatically)<br>
-![plugin](https://github.com/rikodot/binja_native_sigscan/blob/main/plugin.gif)
+<img alt="plugin" src="https://github.com/rikodot/binja_native_sigscan/blob/main/plugin.jpg" width="800">
 
 ### Functional improvements against [Binary Ninja python sigmaker plugin](https://github.com/apekros/binja_sigmaker):
 - signature finding:
