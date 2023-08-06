@@ -35,6 +35,8 @@ std::vector<int> parse_hex_string(const std::string& input)
 void instruction_to_sig(BinaryView* bv, uint64_t addr, size_t inst_length, std::vector<BNConstantReference> consts,
 	std::stringstream& sigStream)
 {
+    const std::string outputWildcardCharacter = Settings::Instance()->Get<std::string>("nativeSigScan.outputWildcardCharacter");
+    
 	auto br = BinaryReader(bv);
 	br.Seek(addr);
 
@@ -84,7 +86,7 @@ void instruction_to_sig(BinaryView* bv, uint64_t addr, size_t inst_length, std::
 		}
 		for (int x = 0; x < new_delta; ++x)
 		{
-			sigStream << "? ";
+			sigStream << outputWildcardCharacter << " ";
 		}
 	}
 }
@@ -423,7 +425,20 @@ extern "C"
 		PluginCommand::Register("Native SigScan\\Find CODE sig",
 			"Find SIGNATURE in current binary (FORMAT '\"\\x49\\x28\\x15\\x00\\x00\\x30\", \"xxx??x\"').",
 			[](BinaryView* view) { find_sig(view, CODE); });
-		
+
+	    auto settings = Settings::Instance();
+	    settings->RegisterGroup("nativeSigScan", "Native SigScan");
+	    settings->RegisterSetting("nativeSigScan.outputWildcardCharacter",
+	        R"~({
+                        "title": "Native SigScan",
+                        "type": "string",
+                        "default": "?",
+	                    "description": "Customize wildcard character(s) in the output of the found pattern"
+	                    })~");
+	    
+	    Json::Value options(Json::objectValue);
+	    options["nativeSigScan.outputWildcardCharacter"] = Json::Value("?");
+	    
 		Log(InfoLog, "BINJA NATIVE SIGSCAN LOADED");
 		return true;
 	}
