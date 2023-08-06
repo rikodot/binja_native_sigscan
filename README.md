@@ -4,6 +4,9 @@
 (allows to receive updates automatically)<br>
 <img alt="plugin" src="https://github.com/rikodot/binja_native_sigscan/blob/main/plugin.jpg" width="800">
 
+### Extra features:
+- option to use custom wildcard when dealing with NORM signatures (credit: @c0dycode)
+
 ### Functional improvements against [Binary Ninja python sigmaker plugin](https://github.com/apekros/binja_sigmaker):
 - signature finding:
   - lighting fast

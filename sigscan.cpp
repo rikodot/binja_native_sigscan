@@ -1,5 +1,7 @@
 #include <cinttypes>
 #include <iomanip>
+#include <regex>
+
 #include "binaryninjaapi.h"
 
 using namespace BinaryNinja;
@@ -33,9 +35,10 @@ std::vector<int> parse_hex_string(const std::string& input)
 // converts single instruction to a signature, determines whether each byte should preserved as is or replaced with a wild byte
 // enhanced & fixed version of community binja python sigmaker plugin, for more information check readme
 void instruction_to_sig(BinaryView* bv, uint64_t addr, size_t inst_length, std::vector<BNConstantReference> consts,
-	std::stringstream& sigStream)
+	std::stringstream& sigStream, bool allow_custom_wildcard)
 {
-    const std::string outputWildcardCharacter = Settings::Instance()->Get<std::string>("nativeSigScan.outputWildcardCharacter");
+	const std::string wildcard =
+		allow_custom_wildcard ? Settings::Instance()->Get<std::string>("nativeSigScan.outNormSigWildcard") : "?";
     
 	auto br = BinaryReader(bv);
 	br.Seek(addr);
@@ -86,7 +89,7 @@ void instruction_to_sig(BinaryView* bv, uint64_t addr, size_t inst_length, std::
 		}
 		for (int x = 0; x < new_delta; ++x)
 		{
-			sigStream << outputWildcardCharacter << " ";
+			sigStream << wildcard << " ";
 		}
 	}
 }
@@ -191,7 +194,7 @@ void create_sig(BinaryView* view, uint64_t start, uint64_t length, sig_types typ
 		const auto consts = func->GetConstantsReferencedByInstruction(func->GetArchitecture(), start);
 		const auto inst_length = view->GetInstructionLength(func->GetArchitecture(), start);
 
-		instruction_to_sig(view, start, inst_length, consts, sig_stream);
+		instruction_to_sig(view, start, inst_length, consts, sig_stream, type == NORM);
 
 		start += inst_length;
 		length -= inst_length;
@@ -235,11 +238,18 @@ void create_sig(BinaryView* view, uint64_t start, uint64_t length, sig_types typ
 #endif
 }
 
-std::string exctract_sig(std::string str, sig_types type)
+std::string exctract_sig(std::string str, sig_types type, bool scan_for_custom_wildcard)
 {
 	std::string sig;
 	if (type == NORM)
 	{
+		//replace custom wildcards with question marks
+		if (scan_for_custom_wildcard)
+		{
+			std::string custom_wildcard = Settings::Instance()->Get<std::string>("nativeSigScan.outNormSigWildcard");
+			str = std::regex_replace(str, std::regex(custom_wildcard), "?");
+		}
+
 		// should work on stuff like:
 		// "48 89 5c 24 08 ? 9a
 		// 48 89 5C 24 08 ?? 9A'
@@ -252,9 +262,9 @@ std::string exctract_sig(std::string str, sig_types type)
 				have_byte = false;
 				continue;
 			}
-			else if (!have_byte)
+			else
 			{
-				if ((c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '?')
+				if ((c < 'a' || c > 'f') && (c < 'A' || c > 'F') && (c < '0' || c > '9') && c != '?')
 				{
 					continue;
 				}
@@ -345,7 +355,10 @@ void find_sig(BinaryView* view, sig_types type)
 	}
 	// Log(InfoLog, "input_data: %s", input_data.c_str());
 
-	const std::string sig = exctract_sig(input_data, type);
+	const std::string sig = exctract_sig(input_data, type,
+		type == NORM && Settings::Instance()->Get<bool>("nativeSigScan.inNormSigScanCustomWildcard")
+			&& Settings::Instance()->Get<std::string>("nativeSigScan.outNormSigWildcard") != "?");
+
 	if (sig.empty())
 	{
 		Log(ErrorLog, "INPUT IS NOT VALID SIG");
@@ -427,17 +440,21 @@ extern "C"
 			[](BinaryView* view) { find_sig(view, CODE); });
 
 	    auto settings = Settings::Instance();
-	    settings->RegisterGroup("nativeSigScan", "Native SigScan");
-	    settings->RegisterSetting("nativeSigScan.outputWildcardCharacter",
-	        R"~({
-                        "title": "Native SigScan",
+		settings->RegisterGroup("nativeSigScan", "Native SigScan");
+		settings->RegisterSetting("nativeSigScan.outNormSigWildcard",
+			R"~({
+                        "title": "Custom wildcard",
                         "type": "string",
                         "default": "?",
-	                    "description": "Customize wildcard character(s) in the output of the found pattern"
+	                    "description": "Wildcard character(s) used when creating NORM patterns."
 	                    })~");
-	    
-	    Json::Value options(Json::objectValue);
-	    options["nativeSigScan.outputWildcardCharacter"] = Json::Value("?");
+		settings->RegisterSetting("nativeSigScan.inNormSigScanCustomWildcard",
+			R"~({
+                        "title": "Scan for custom wildcard",
+                        "type": "boolean",
+                        "default": true,
+	                    "description": "Option to scan for custom wildcards when finding NORM patterns (only used if default wildcard is changed), ideally should be set to false if custom wildcard can be a regular byte found in disassembly (0x00-0xFF)."
+	                    })~");
 	    
 		Log(InfoLog, "BINJA NATIVE SIGSCAN LOADED");
 		return true;
