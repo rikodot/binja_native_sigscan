@@ -1,6 +1,5 @@
 #include <cinttypes>
 #include <iomanip>
-#include <regex>
 
 #include "binaryninjaapi.h"
 
@@ -238,6 +237,17 @@ void create_sig(BinaryView* view, uint64_t start, uint64_t length, sig_types typ
 #endif
 }
 
+// Taken from: https://stackoverflow.com/a/3418285 (Michael Mrozek)
+void replace_all(std::string& str, const std::string& from, const std::string& to) {
+	if(from.empty())
+		return;
+	size_t start_pos = 0;
+	while((start_pos = str.find(from, start_pos)) != std::string::npos) {
+		str.replace(start_pos, from.length(), to);
+		start_pos += to.length();
+	}
+}
+
 std::string exctract_sig(std::string str, sig_types type, bool scan_for_custom_wildcard)
 {
 	std::string sig;
@@ -247,7 +257,7 @@ std::string exctract_sig(std::string str, sig_types type, bool scan_for_custom_w
 		if (scan_for_custom_wildcard)
 		{
 			std::string custom_wildcard = Settings::Instance()->Get<std::string>("nativeSigScan.outNormSigWildcard");
-			str = std::regex_replace(str, std::regex(custom_wildcard), "?");
+			replace_all(str, custom_wildcard, "?");
 		}
 
 		// should work on stuff like:
