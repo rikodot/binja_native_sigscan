@@ -403,20 +403,26 @@ void find_sig(BinaryView* view, sig_types type)
 
 	Log(InfoLog, "-- NATIVE SIGSCAN START --");
 	uint64_t scan_start = bin_start;
+	uint64_t last_found_at = NULL;
 	while (true)
 	{
 		uint64_t j = 0;
-		uint64_t found_at = finder(j, scan_start);
+		const uint64_t found_at = finder(j, scan_start);
 		if (j >= target_bytes.size())
 		{
 			Log(InfoLog, "FOUND SIG AT 0x%llx", found_at);
 			scan_start = found_at + 1;
+			last_found_at = found_at;
 		}
 		else
 		{
 			break;
 		}
 	}
+	
+	if (Settings::Instance()->Get<bool>("nativeSigScan.navigateToLastResultAfterSearch") && last_found_at != NULL)
+		view->Navigate(view->GetFile()->GetCurrentView(), last_found_at);
+	
 	Log(InfoLog, "-- NATIVE SIGSCAN END --");
 }
 
@@ -454,6 +460,13 @@ extern "C"
                         "type": "boolean",
                         "default": true,
 	                    "description": "Option to scan for custom wildcards when finding NORM patterns (only used if default wildcard is changed), ideally should be set to false if custom wildcard can be a regular byte found in disassembly (0x00-0xFF)."
+	                    })~");
+		settings->RegisterSetting("nativeSigScan.navigateToLastResultAfterSearch",
+			R"~({
+                        "title": "Navigate to last found result automatically",
+                        "type": "boolean",
+                        "default": false,
+	                    "description": "Option to automatically navigate the current view to the last found result."
 	                    })~");
 	    
 		Log(InfoLog, "BINJA NATIVE SIGSCAN LOADED");
