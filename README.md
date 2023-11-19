@@ -7,6 +7,8 @@
 ### Extra features:
 - option to use custom wildcard when dealing with NORM signatures (credit: [@c0dycode](https://github.com/c0dycode))
 
+#### if there has been an update to Binary Ninja and this plugin has not been updated yet, please open an issue to alert me
+
 ### Functional improvements against [Binary Ninja python sigmaker plugin](https://github.com/apekros/binja_sigmaker):
 - signature finding:
   - lighting fast
@@ -59,6 +61,9 @@ cmake -S . -B build
 6. to load the plugin, copy compiled binary into the plugins folder
    - on windows `copy ".\build\Release\sigscan.dll" "%appdata%\Binary Ninja\plugins\sigscan.dll"`
    - on linux `cp ./build/out/bin/libsigscan.so ~/.binaryninja/plugins/libsigscan.so`
+
+### Building using Github Actions
+- based on [binja-ci-tests](https://github.com/CouleeApps/binja-ci-tests)
 
 ### Known issues
 - if a code signature is provided and the 'find norm signature' process is executed, Binary Ninja will freeze and crash, potentially caused by an infinite loop, similar issue may also occur in various other scenarios
