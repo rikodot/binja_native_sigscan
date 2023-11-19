@@ -280,13 +280,15 @@ std::string exctract_sig(std::string str, sig_types type, bool scan_for_custom_w
 		// "48 89 5c 24 08 ? 9a
 		// 48 89 5C 24 08 ?? 9A'
 		bool have_byte = false;
+		int cur_byte_len = 0;
 		for (auto& c : str)
 		{
 			if (have_byte && c == ' ')
 			{
+				if (cur_byte_len > 2) { return ""; }
 				sig += " ";
 				have_byte = false;
-				continue;
+				cur_byte_len = 0;
 			}
 			else
 			{
@@ -297,6 +299,7 @@ std::string exctract_sig(std::string str, sig_types type, bool scan_for_custom_w
 				else if (c == '?')
 				{
 					sig += "?";
+					++cur_byte_len;
 					have_byte = true;
 				}
 				else
@@ -306,6 +309,7 @@ std::string exctract_sig(std::string str, sig_types type, bool scan_for_custom_w
 						have_byte = true;
 					}
 					sig += c;
+					++cur_byte_len;
 				}
 			}
 		}
@@ -341,27 +345,30 @@ std::string exctract_sig(std::string str, sig_types type, bool scan_for_custom_w
 		// MASK
 		// find the first occurrence of ',' after pos in str
 		pos = str.find(',', pos);
-		// read characters until is 'x' or '?'
-		while (pos < str.size() && str[pos] != 'x' && str[pos] != '?')
+		if (pos != std::string::npos)
 		{
-			++pos;
-		}
-		// read characters until the end of the string or a character that is not 'x' or '?'
-		for (size_t i = pos, j = 0; i < str.size() && j * 3 + 2 < sig.size(); ++i, ++j)
-		{
-			char c = str[i];
-			if (c == '?')
+			// read characters until is 'x' or '?'
+			while (pos < str.size() && str[pos] != 'x' && str[pos] != '?')
 			{
-				sig[j * 3] = '?';
-				sig[j * 3 + 1] = '?';
+				++pos;
 			}
-			else if (c != 'x')
+			// read characters until the end of the string or a character that is not 'x' or '?'
+			for (size_t i = pos, j = 0; i < str.size() && j * 3 + 2 < sig.size(); ++i, ++j)
 			{
-				break;
+				char c = str[i];
+				if (c == '?')
+				{
+					sig[j * 3] = '?';
+					sig[j * 3 + 1] = '?';
+				}
+				else if (c != 'x')
+				{
+					break;
+				}
 			}
 		}
-		sig.pop_back();
 	}
+	if (sig.back() == ' ') { sig.pop_back(); }
 	return sig;
 }
 
@@ -388,6 +395,7 @@ void find_sig(BinaryView* view, sig_types type)
 	if (sig.empty())
 	{
 		Log(ErrorLog, "INPUT IS NOT VALID SIG");
+		return;
 	}
 	// Log(InfoLog, "sig: %s", sig.c_str());
 
