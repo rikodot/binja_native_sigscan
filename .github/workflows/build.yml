@@ -60,10 +60,10 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{matrix.config.name}}-${{matrix.version}}
-        path: ${{github.workspace}}/out/bin/*sigscan*
+        path: ${{github.workspace}}/build/out/bin/*sigscan*
     - name: Upload artifact for Linux
       if: runner.os == 'Linux'
       uses: actions/upload-artifact@v3
       with:
         name: ${{matrix.config.name}}-${{matrix.version}}
-        path: ${{github.workspace}}/out/bin/*sigscan*
+        path: ${{github.workspace}}/build/out/bin/*sigscan*
