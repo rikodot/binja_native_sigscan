@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ${{matrix.config.os}}
+    strategy:
+      matrix:
+        config:
+        - {
+            os: windows-latest,
+            name: windows
+          }
+        - {
+            os: macos-latest,
+            name: macos
+          }
+        - {
+            os: ubuntu-latest,
+            name: ubuntu
+          }
+        version: [ v3.3.3996, v3.4.4271-stable, v3.5.4526-stable, dev ]
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+    - uses: seanmiddleditch/gha-setup-ninja@master
+    - uses: ilammy/msvc-dev-cmd@v1
+    - name: Update submodule
+      run: |
+        git clone --recurse-submodules https://github.com/Vector35/binaryninja-api binaryninjaapi
+        cd binaryninjaapi
+        git fetch --tags
+        git checkout --force ${{matrix.version}}
+    - name: Patch api to allow building headlessly
+      run: |
+        cd binaryninjaapi
+        git apply --verbose ../binja.patch
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{matrix.config.name}}-${{matrix.version}}
+        path: ${{github.workspace}}/build/*sigscan*
