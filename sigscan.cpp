@@ -184,19 +184,33 @@ enum sig_types
 
 void create_sig(BinaryView* view, uint64_t start, uint64_t length, sig_types type)
 {
+	if (view->GetCurrentView().find("Raw") != std::string::npos || view->GetCurrentView().find("Hex") != std::string::npos)
+	{
+        Log(ErrorLog, "CANNOT CREATE SIG FROM RAW OR HEX VIEW");
+        return;
+    }
+
 	std::string pattern;
 	std::stringstream sig_stream;
+	bool instruction_parsing = view->GetAnalysisFunctionsContainingAddress(start).size() > 0;
 
-	const auto func = view->GetAnalysisFunctionsContainingAddress(start)[0];
-	while (length > 0)
+	if (instruction_parsing)
 	{
-		const auto consts = func->GetConstantsReferencedByInstruction(func->GetArchitecture(), start);
-		const auto inst_length = view->GetInstructionLength(func->GetArchitecture(), start);
+		auto func = view->GetAnalysisFunctionsContainingAddress(start)[0];
+		while (length > 0)
+		{
+			const auto consts = func->GetConstantsReferencedByInstruction(func->GetArchitecture(), start);
+			const auto inst_length = view->GetInstructionLength(func->GetArchitecture(), start);
 
-		instruction_to_sig(view, start, inst_length, consts, sig_stream, type == NORM);
+			instruction_to_sig(view, start, inst_length, consts, sig_stream, type == NORM);
 
-		start += inst_length;
-		length -= inst_length;
+			start += inst_length;
+			length -= inst_length;
+		}
+	}
+	else
+	{
+		instruction_to_sig(view, start, length, {}, sig_stream, type == NORM);
 	}
 
 	pattern = std::string {sig_stream.str().substr(0, sig_stream.str().size() - 1)};
@@ -228,21 +242,23 @@ void create_sig(BinaryView* view, uint64_t start, uint64_t length, sig_types typ
 		pattern = "\"\\x" + pattern + "\", \"" + mask + "\"";
 	}
 
-	Log(InfoLog, "%s", pattern.c_str());
 #ifdef WIN32
 	if (!set_clipboard_text(pattern))
 	{
 		LogError("Failed to copy sig to clipboard");
 	}
 #endif
+
+	if (!instruction_parsing) { pattern += " [RAW BYTES - NO WILDCARDS]"; }
+	Log(instruction_parsing ? InfoLog : WarningLog, "%s", pattern.c_str());
 }
 
-// Taken from: https://stackoverflow.com/a/3418285 (Michael Mrozek)
-void replace_all(std::string& str, const std::string& from, const std::string& to) {
-	if(from.empty())
-		return;
+void replace_all(std::string& str, const std::string& from, const std::string& to)
+{
+	if (from.empty()) { return; }
 	size_t start_pos = 0;
-	while((start_pos = str.find(from, start_pos)) != std::string::npos) {
+	while((start_pos = str.find(from, start_pos)) != std::string::npos)
+	{
 		str.replace(start_pos, from.length(), to);
 		start_pos += to.length();
 	}
