@@ -413,6 +413,8 @@ void find_sig(BinaryView* view, sig_types type)
 
 	Log(InfoLog, "-- NATIVE SIGSCAN START --");
 	uint64_t scan_start = bin_start;
+	uint64_t next_found_at = NULL;
+	bool next_found = false;
 	while (true)
 	{
 		uint64_t j = 0;
@@ -421,12 +423,23 @@ void find_sig(BinaryView* view, sig_types type)
 		{
 			Log(InfoLog, "FOUND SIG AT 0x%llx", found_at);
 			scan_start = found_at + 1;
+			if (!next_found)
+			{
+				next_found_at = found_at;
+				if (next_found_at > view->GetCurrentOffset()) { next_found = true; }
+			}
 		}
 		else
 		{
 			break;
 		}
 	}
+
+	if (Settings::Instance()->Get<bool>("nativeSigScan.navigateToNextResultAfterSearch") && next_found_at != NULL)
+	{
+		view->Navigate(view->GetFile()->GetCurrentView(), next_found_at);
+	}
+
 	Log(InfoLog, "-- NATIVE SIGSCAN END --");
 }
 
@@ -464,6 +477,13 @@ extern "C"
                         "type": "boolean",
                         "default": true,
 	                    "description": "Option to scan for custom wildcards when finding NORM patterns (only used if default wildcard is changed), ideally should be set to false if custom wildcard can be a regular byte found in disassembly (0x00-0xFF)."
+	                    })~");
+		settings->RegisterSetting("nativeSigScan.navigateToNextResultAfterSearch",
+			R"~({
+                        "title": "Navigate to the closest result",
+                        "type": "boolean",
+                        "default": false,
+	                    "description": "Option to automatically navigate the current view to the closest result relative to the current offset (goes for the closest greater offset or the closest smaller if no greater found)."
 	                    })~");
 	    
 		Log(InfoLog, "BINJA NATIVE SIGSCAN LOADED");
