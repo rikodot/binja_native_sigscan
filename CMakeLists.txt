@@ -4,17 +4,15 @@ project(sigscan CXX C)
 
 add_library(${PROJECT_NAME} SHARED
     sigscan.cpp)
-
-if(NOT BN_API_BUILD_EXAMPLES AND NOT BN_INTERNAL_BUILD)
-    # Out-of-tree build
-    find_path(
-        BN_API_PATH
-        NAMES binaryninjaapi.h
-        HINTS ../.. binaryninjaapi $ENV{BN_API_PATH}
-        REQUIRED
-    )
-    add_subdirectory(${BN_API_PATH} api)
-endif()
+    
+set(HEADLESS 1)
+find_path(
+    BN_API_PATH
+    NAMES binaryninjaapi.h
+    HINTS ../.. binaryninjaapi $ENV{BN_API_PATH}
+    REQUIRED
+)
+add_subdirectory(${BN_API_PATH} api)
 
 target_link_libraries(${PROJECT_NAME}
     binaryninjaapi)
