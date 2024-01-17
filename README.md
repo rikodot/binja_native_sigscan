@@ -47,18 +47,19 @@
   3. signature is written into the log bar (on windows also copied directly to the clipboard), if you want to copy previously created signature, simply find it in the log bar, right click it and hit copy to avoid recreating it or use Ctrl+C shortcut
 
 ### Build process
-1. head to the binja api link you can find in `C:\Program Files\Vector35\BinaryNinja\api_REVISION.txt` (in my case, at the time of creating this repository, it is `https://github.com/Vector35/binaryninja-api/tree/919384bb2bb9216e000750a00793549ef7a46d87`)
-2. download repository as a zip (click green 'Code' button and hit 'Download ZIP')
-3. put wherever you want and extract it
-4. open cmd/terminal and navigate into the extracted folder
+1. get git link to currently installed version from `C:\Program Files\Vector35\BinaryNinja\api_REVISION.txt` (in my case, at the time of creating this repository, it is `https://github.com/Vector35/binaryninja-api/tree/d2e0420679ad9cfc0a25ccf768cdfef7bb14c978`)
+2. clone and build (change the hash in `git reset` command)
 ```bash
+git clone https://github.com/Vector35/binaryninja-api --recurse-submodules
+cd binaryninja-api
+git reset --hard d2e0420679ad9cfc0a25ccf768cdfef7bb14c978
 cd examples
 git clone https://github.com/rikodot/binja_native_sigscan
 cd binja_native_sigscan
 cmake -S . -B build
 ```
-5. launch newly generated Visual Studio .sln project located in (...\binaryninja-api\examples\binja_native_sigscan\build\) and build the project OR use `cmake --build build -j8` instead
-6. to load the plugin, copy compiled binary into the plugins folder
+3. launch newly generated Visual Studio .sln project located in (...\binaryninja-api\examples\binja_native_sigscan\build\) and build the project OR use `cmake --build build -j8` instead
+4. to load the plugin, copy compiled binary into the plugins folder
    - on windows `copy ".\build\Release\sigscan.dll" "%appdata%\Binary Ninja\plugins\sigscan.dll"`
    - on linux `cp ./build/out/bin/libsigscan.so ~/.binaryninja/plugins/libsigscan.so`
 
