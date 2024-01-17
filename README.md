@@ -58,10 +58,11 @@ git clone https://github.com/rikodot/binja_native_sigscan
 cd binja_native_sigscan
 cmake -S . -B build
 ```
-3. launch newly generated Visual Studio .sln project located in (...\binaryninja-api\examples\binja_native_sigscan\build\) and build the project OR use `cmake --build build -j8` instead
+3. launch newly generated Visual Studio .sln project located in (...\binaryninja-api\examples\binja_native_sigscan\build\) and build the project or use `cmake --build build -j8` instead
 4. to load the plugin, copy compiled binary into the plugins folder
    - on windows `copy ".\build\Release\sigscan.dll" "%appdata%\Binary Ninja\plugins\sigscan.dll"`
    - on linux `cp ./build/out/bin/libsigscan.so ~/.binaryninja/plugins/libsigscan.so`
+- you need to have same Binary Ninja version installed as the API version you are compiling
 
 ### Building using Github Actions
 - based on [binja-ci-tests](https://github.com/CouleeApps/binja-ci-tests)
