@@ -505,6 +505,12 @@ void find_sig(BinaryView* view, sig_types type)
 				{
 					Log(InfoLog, "\tFOUND SIG AT 0x%llx", found_at);
 					scan_start = found_at + 1;
+					if (!next_found)
+					{
+						next_found_at = found_at;
+						if (next_found_at > view->GetCurrentOffset())
+							next_found = true;
+					}
 				}
 				else
 				{
@@ -526,6 +532,12 @@ void find_sig(BinaryView* view, sig_types type)
 			{
 				Log(InfoLog, "\tFOUND SIG AT 0x%llx", found_at);
 				scan_start = found_at + 1;
+				if (!next_found)
+				{
+					next_found_at = found_at;
+					if (next_found_at > view->GetCurrentOffset())
+						next_found = true;
+				}
 			}
 			else
 			{
