@@ -399,7 +399,7 @@ void find_sig(BinaryView* view, sig_types type)
 	}
 	// Log(InfoLog, "sig: %s", sig.c_str());
 	
-	std::vector<int> target_bytes = parse_hex_string(sig);
+	std::vector<uint8_t> target_bytes = parse_hex_string(sig);
 
 	auto signature = reinterpret_cast<PBYTE>(target_bytes.data());
 	std::vector<char> maskV;
