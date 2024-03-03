@@ -446,7 +446,7 @@ void find_sig(BinaryView* view, sig_types type)
 		Log(InfoLog, "Scan End: 0x%llx", view->GetEnd() - 1);
 	}
 
-	auto CompareByteArray = [&](PBYTE data, PBYTE signature, PBYTE mask, int sigLength, uint64_t offset = 0) -> bool {
+	auto CompareByteArray = [&](PBYTE data, PBYTE signature, PBYTE mask, int sigLength) -> bool {
 		int iSig = 0;
 		for (; iSig < sigLength; ++iSig, ++signature, ++data, ++mask)
 		{
@@ -476,7 +476,7 @@ void find_sig(BinaryView* view, sig_types type)
 		{
 			if (*base != First)
 				continue;
-			if (CompareByteArray(base, signature, mask, sigLength, reinterpret_cast<uint64_t>(base) - offset + start))
+			if (CompareByteArray(base, signature, mask, sigLength))
 				return reinterpret_cast<uint64_t>(base) - offset + start;
 		}
 		if (lenRead < (i + sigLength))
