@@ -9,9 +9,9 @@ using namespace BinaryNinja;
 
 // converts string signature to array of bytes
 // works only with NORM signature type
-std::vector<int> parse_hex_string(const std::string& input)
+std::vector<uint8_t> parse_hex_string(const std::string& input)
 {
-	std::vector<int> output;
+	std::vector<uint8_t> output;
 
 	std::istringstream iss(input);
 	std::string token;
@@ -38,7 +38,7 @@ void instruction_to_sig(BinaryView* bv, uint64_t addr, size_t inst_length, std::
 {
 	const std::string wildcard =
 		allow_custom_wildcard ? Settings::Instance()->Get<std::string>("nativeSigScan.outNormSigWildcard") : "?";
-    
+
 	auto br = BinaryReader(bv);
 	br.Seek(addr);
 
@@ -186,9 +186,9 @@ void create_sig(BinaryView* view, uint64_t start, uint64_t length, sig_types typ
 {
 	if (view->GetCurrentView().find("Raw") != std::string::npos || view->GetCurrentView().find("Hex") != std::string::npos)
 	{
-        Log(ErrorLog, "CANNOT CREATE SIG FROM RAW OR HEX VIEW");
-        return;
-    }
+		Log(ErrorLog, "CANNOT CREATE SIG FROM RAW OR HEX VIEW");
+		return;
+	}
 
 	std::string pattern;
 	std::stringstream sig_stream;
@@ -398,64 +398,139 @@ void find_sig(BinaryView* view, sig_types type)
 		return;
 	}
 	// Log(InfoLog, "sig: %s", sig.c_str());
-
+	
 	std::vector<int> target_bytes = parse_hex_string(sig);
 
-	uint64_t bin_start = view->GetStart();
-	uint64_t bin_end = view->GetEnd();
-	uint64_t bin_size = bin_end - bin_start;
-	// Log(InfoLog, "bin_start = 0x%llx", bin_start);
-	// Log(InfoLog, "bin_end = 0x%llx", bin_end);
-	// Log(InfoLog, "bin_size = 0x%llx", bin_size);
-
-	auto finder = [&](uint64_t& j, uint64_t scan_start) -> uint64_t {
-		unsigned char byte;
-		bool found_first = false;
-		uint64_t found_start = 0;
-		for (uint64_t i = scan_start; i < bin_end && j < target_bytes.size(); ++i)
-		{
-			view->Read(&byte, i, 1);
-			// Log(InfoLog, "i = 0x%x", byte);
-			if (target_bytes[j] == byte || target_bytes[j] == WILD_BYTE)
-			{
-				if (!found_first)
-				{
-					found_first = true;
-					found_start = i;
-				}
-				++j;
-			}
-			else if (found_first)
-			{
-				found_first = false;
-				j = 0;
-				i = found_start;
-			}
-		}
-		return found_start;
-	};
-
-	Log(InfoLog, "-- NATIVE SIGSCAN START --");
-	uint64_t scan_start = bin_start;
-	uint64_t next_found_at = NULL;
-	bool next_found = false;
-	while (true)
+	auto signature = reinterpret_cast<PBYTE>(target_bytes.data());
+	std::vector<char> maskV;
+	for (int i = 0; i < sig.length(); i++)
 	{
-		uint64_t j = 0;
-		uint64_t found_at = finder(j, scan_start);
-		if (j >= target_bytes.size())
+		if (sig[i] == ' ')
+			continue;
+		if (sig[i] == '?')
 		{
-			Log(InfoLog, "FOUND SIG AT 0x%llx", found_at);
-			scan_start = found_at + 1;
-			if (!next_found)
+			if (i + 1 >= sig.length())
 			{
-				next_found_at = found_at;
-				if (next_found_at > view->GetCurrentOffset()) { next_found = true; }
+				Log(ErrorLog, "Signature ending with wildcard!");
+				return;
 			}
+			maskV.push_back('?');
+			if (sig[i + 1] == '?')
+				i++;
 		}
 		else
 		{
-			break;
+			if (!isxdigit(sig[i]) || sig[i + 1] == ' ' || sig[i + 1] == '?')
+			{
+				Log(ErrorLog, "Signature malformed!");
+				return;
+			}
+			maskV.push_back('x');
+			i++;
+		}
+	}
+	auto mask = reinterpret_cast<PBYTE>(maskV.data());
+	mask[maskV.size()] = '\0';
+	Log(InfoLog, "mask: %s", mask);
+
+	auto mem_segments = view->GetSegments();
+	if (mem_segments.size() > 0)
+	{
+		Log(InfoLog, "Mem Segments: %i", mem_segments.size());
+		Log(InfoLog, "Scan Start: 0x%llx", mem_segments[0]->GetStart());
+		Log(InfoLog, "Scan End: 0x%llx", mem_segments[mem_segments.size() - 1]->GetEnd() - 1);
+	}
+	else
+	{
+		Log(InfoLog, "Scan Start: 0x%llx", view->GetStart());
+		Log(InfoLog, "Scan End: 0x%llx", view->GetEnd() - 1);
+	}
+
+	auto CompareByteArray = [&](PBYTE data, PBYTE signature, PBYTE mask, int sigLength, uint64_t offset = 0) -> bool {
+		int iSig = 0;
+		for (; iSig < sigLength; ++iSig, ++signature, ++data, ++mask)
+		{
+			if (*mask != 'x')
+				continue;
+			if (*data != *signature)
+				return false;
+		}
+		return true;
+	};
+
+	auto FindSignature =
+		[&](uint64_t start, uint64_t imageSize, PBYTE signature, int sigLength, PBYTE mask) -> uint64_t {
+		BYTE First = signature[0];
+		PBYTE base;
+		base = new byte[imageSize];
+
+		auto lenRead = view->Read(base, start, imageSize);
+		if (lenRead != imageSize)
+			Log(WarningLog, "Could not read full segment memory! %i <> %i", imageSize, lenRead);
+
+		uint64_t offset = reinterpret_cast<uint64_t>(base);
+		PBYTE Max = base + imageSize - sigLength;
+
+		int i = 0;
+		for (; base < Max; ++base, ++i)
+		{
+			if (*base != First)
+				continue;
+			if (CompareByteArray(base, signature, mask, sigLength, reinterpret_cast<uint64_t>(base) - offset + start))
+				return reinterpret_cast<uint64_t>(base) - offset + start;
+		}
+		if (lenRead < (i + sigLength))
+			Log(WarningLog, "Could not search full segment memory! %i <> %i", lenRead, i + sigLength);
+
+		return NULL;
+	};
+
+	Log(InfoLog, "-- NATIVE SIGSCAN START --");
+	uint64_t next_found_at = NULL;
+	bool next_found = false;
+
+	// iterate through all mem segments
+	if (mem_segments.size() > 0)
+	{
+		for (int i = 0; i < mem_segments.size(); i++)
+		{
+			uint64_t mem_start = mem_segments[i]->GetStart();
+			uint64_t scan_start = mem_start;
+			uint64_t mem_size = mem_segments[i]->GetEnd() - mem_start;
+			while (true)
+			{
+				uint64_t found_at = FindSignature(
+					scan_start, mem_size - (scan_start - mem_start), signature, target_bytes.size(), mask);
+				if (found_at > 0)
+				{
+					Log(InfoLog, "\tFOUND SIG AT 0x%llx", found_at);
+					scan_start = found_at + 1;
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
+	}
+	else
+	{
+		uint64_t mem_start = view->GetStart();
+		uint64_t scan_start = mem_start;
+		uint64_t mem_size = view->GetEnd() - mem_start;
+		while (true)
+		{
+			uint64_t found_at =
+				FindSignature(scan_start, mem_size - (scan_start - mem_start), signature, target_bytes.size(), mask);
+			if (found_at > 0)
+			{
+				Log(InfoLog, "\tFOUND SIG AT 0x%llx", found_at);
+				scan_start = found_at + 1;
+			}
+			else
+			{
+				break;
+			}
 		}
 	}
 
@@ -480,13 +555,13 @@ extern "C"
 			"Create SIGNATURE IN FORMAT '\"\\x49\\x28\\x15\\x00\\x00\\x30\", \"xxx??x\"'.",
 			[](BinaryView* view, uint64_t start, uint64_t length) { create_sig(view, start, length, CODE); });
 		PluginCommand::Register("Native SigScan\\Find NORM sig",
-			"Find SIGNATURE in current binary (FORMAT '49 28 15 ? ? 30').",
+			"Find SIGNATURE in current binary (FORMAT '49 28 15 ? ? 30' OR '49 28 15 ?? ?? 30').",
 			[](BinaryView* view) { find_sig(view, NORM); });
 		PluginCommand::Register("Native SigScan\\Find CODE sig",
 			"Find SIGNATURE in current binary (FORMAT '\"\\x49\\x28\\x15\\x00\\x00\\x30\", \"xxx??x\"').",
 			[](BinaryView* view) { find_sig(view, CODE); });
 
-	    auto settings = Settings::Instance();
+		auto settings = Settings::Instance();
 		settings->RegisterGroup("nativeSigScan", "Native SigScan");
 		settings->RegisterSetting("nativeSigScan.outNormSigWildcard",
 			R"~({
@@ -509,7 +584,7 @@ extern "C"
                         "default": false,
 	                    "description": "Option to automatically navigate the current view to the closest result relative to the current offset (goes for the closest greater offset or the closest smaller if no greater found)."
 	                    })~");
-	    
+
 		Log(InfoLog, "BINJA NATIVE SIGSCAN LOADED");
 		return true;
 	}
