@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  BUILD_TYPE: Release
+  BUILD_TYPE: RelWithDebInfo
 
 jobs:
   build:
@@ -17,18 +17,23 @@ jobs:
       matrix:
         config:
         - {
-            os: windows-latest,
+            os: windows-2019,
             name: windows
           }
         - {
-            os: macos-latest,
+            os: macos-13,
             name: macos
           }
         - {
-            os: ubuntu-latest,
+            os: ubuntu-22.04,
             name: ubuntu
           }
-        version: [ v3.3.3996, v3.4.4271-stable, v3.5.4526-stable, v4.0.4911-stable, v4.0.4958-stable, dev ]
+        version:
+        - v3.3.3996
+        - v3.4.4271-stable
+        - v3.5.4526-stable
+        - v4.0.4958-stable
+        - dev
     steps:
     - uses: actions/checkout@v3
       with:
@@ -42,15 +47,12 @@ jobs:
         git fetch --tags
         git checkout --force ${{matrix.version}}
     - name: Patch api to allow building headlessly
+      shell: bash
       run: |
         cd binaryninjaapi
-        git apply --verbose ../binja.patch
-    #- name: Configure CMake for Windows
-    #  if: runner.os == 'Windows'
-    #  run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-    #- name: Configure CMake for Linux & macOS
-    #  if: runner.os != 'Windows'
-    #  run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}        
+        git apply --verbose ../.github/workflows/4.1_0001-Support-building-plugins-without-an-install.patch \
+        || git apply --verbose ../.github/workflows/4.0_0001-Support-building-plugins-without-an-install.patch \
+        || git apply --verbose ../.github/workflows/3.5_0001-Support-building-plugins-without-an-install.patch 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
     - name: Build

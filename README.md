@@ -65,7 +65,7 @@ cmake -S . -B build
 - you need to have same Binary Ninja version installed as the API version you are compiling
 
 ### Building using Github Actions
-- based on [binja-ci-tests](https://github.com/CouleeApps/binja-ci-tests)
+- based on [sample_plugin_cpp](https://github.com/Vector35/sample_plugin_cpp)
 
 ### Backstory
 I have been using IDA for majority of my reverse engineering career and recently decided to switch to Binary Ninja. I work with signatures on daily basis and this plugin is a must for me. Although there already is a community plugin for the exact same purpose, it is frankly unusable for binaries over 50KB in size as it is incredibly slow and on top of that contains two bugs causing creation of signatures with wrongly placed wild bytes resulting in signatures not being compatible with different compilations of the same binary. I still want to note that the python version was a nice resource in creation of this version.

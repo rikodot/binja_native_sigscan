@@ -1,0 +1,216 @@
+From 8071d66a654cbbf193b65813ab35d4b894f428b4 Mon Sep 17 00:00:00 2001
+From: Glenn Smith <glenn@vector35.com>
+Date: Thu, 4 Apr 2024 21:49:55 -0700
+Subject: [PATCH] Support building plugins without an install
+
+---
+ CMakeLists.txt          |  56 ++++++++++++++-----
+ cmake/generate_stubs.py | 121 ++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 163 insertions(+), 14 deletions(-)
+ create mode 100644 cmake/generate_stubs.py
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 57ed627e..0a434a5d 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -33,10 +33,36 @@ add_library(binaryninjaapi STATIC ${BN_API_SOURCES})
+ target_include_directories(binaryninjaapi
+     PUBLIC ${PROJECT_SOURCE_DIR})
+ 
+-find_package(BinaryNinjaCore REQUIRED)
+-target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})
+-target_link_directories(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARY_DIRS})
+-target_compile_definitions(binaryninjaapi PUBLIC ${BinaryNinjaCore_DEFINITIONS})
++find_package(BinaryNinjaCore)
++if(BinaryNinjaCore_FOUND)
++    target_link_libraries(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARIES})
++    target_link_directories(binaryninjaapi PUBLIC ${BinaryNinjaCore_LIBRARY_DIRS})
++    target_compile_definitions(binaryninjaapi PUBLIC ${BinaryNinjaCore_DEFINITIONS})
++else()
++    if(APPLE)
++        target_link_options(binaryninjaapi PUBLIC -undefined dynamic_lookup)
++    elseif(MSVC)
++        # Generate stubs.cpp with implementations of all the BNAPI functions
++        execute_process(COMMAND python ${PROJECT_SOURCE_DIR}/cmake/generate_stubs.py ${PROJECT_SOURCE_DIR}/binaryninjacore.h ${PROJECT_BINARY_DIR}/stubs)
++        
++        # Compile those stubs into a stub library we can use to fool the linker
++        add_library(binaryninjacore_stubs SHARED ${PROJECT_BINARY_DIR}/stubs/stubs.cpp)
++        set_target_properties(binaryninjacore_stubs
++            PROPERTIES OUTPUT_NAME binaryninjacore
++            SOVERSION 1
++            ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/stubs
++            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/stubs
++            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/stubs
++        )
++        target_include_directories(binaryninjacore_stubs PUBLIC ${PROJECT_SOURCE_DIR})
++        
++        # Be sure to only link against the stubs archive file
++        add_dependencies(binaryninjaapi binaryninjacore_stubs)
++        target_link_libraries(binaryninjaapi PUBLIC "$<TARGET_PROPERTY:binaryninjacore_stubs,ARCHIVE_OUTPUT_DIRECTORY>/$<TARGET_PROPERTY:binaryninjacore_stubs,OUTPUT_NAME>.lib")
++    else()
++        target_link_options(binaryninjaapi PUBLIC "LINKER:--allow-shlib-undefined")
++    endif()
++endif()
+ 
+ if(BN_REF_COUNT_DEBUG)
+     target_compile_definitions(binaryninjaapi PUBLIC BN_REF_COUNT_DEBUG)
+@@ -94,16 +120,18 @@ function(bn_install_plugin target)
+         list(APPEND CMAKE_MODULE_PATH "${BN_API_SOURCE_DIR}/cmake")
+ 
+         # BinaryNinjaCore has the user plugins dir define that we want
+-        find_package(BinaryNinjaCore REQUIRED)
+-        if(WIN32)
+-            install(TARGETS ${target} RUNTIME
+-                DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
+-
+-            install(FILES $<TARGET_PDB_FILE:${target}>
+-                DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR} OPTIONAL)
+-        else()
+-            install(TARGETS ${target} LIBRARY
+-                DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
++        find_package(BinaryNinjaCore)
++        if(BinaryNinjaCore_FOUND)
++            if(WIN32)
++                install(TARGETS ${target} RUNTIME
++                    DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
++
++                install(FILES $<TARGET_PDB_FILE:${target}>
++                    DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR} OPTIONAL)
++            else()
++                install(TARGETS ${target} LIBRARY
++                    DESTINATION ${BinaryNinjaCore_USER_PLUGINS_DIR})
++            endif()
+         endif()
+     endif()
+ endfunction()
+diff --git a/cmake/generate_stubs.py b/cmake/generate_stubs.py
+new file mode 100644
+index 00000000..48ab574f
+--- /dev/null
++++ b/cmake/generate_stubs.py
+@@ -0,0 +1,121 @@
++# Copyright (c) 2015-2024 Vector 35 Inc
++#
++# Permission is hereby granted, free of charge, to any person obtaining a copy
++# of this software and associated documentation files (the "Software"), to
++# deal in the Software without restriction, including without limitation the
++# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
++# sell copies of the Software, and to permit persons to whom the Software is
++# furnished to do so, subject to the following conditions:
++#
++# The above copyright notice and this permission notice shall be included in
++# all copies or substantial portions of the Software.
++#
++# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
++# IN THE SOFTWARE.
++
++# Based on BinExport
++
++# Copyright 2011-2024 Google LLC
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     https://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++import argparse
++import os
++import re
++import sys
++
++parser = argparse.ArgumentParser(sys.argv[0])
++parser.add_argument("core_header")
++parser.add_argument("build_dir")
++
++options = parser.parse_args()
++
++print(f"GENERATE STUBS: {options.core_header} -> {options.build_dir}")
++print(f"{sys.executable} {' '.join(sys.argv)}")
++
++os.makedirs(options.build_dir, exist_ok=True)
++output_source = os.path.join(options.build_dir, 'stubs.cpp')
++
++with open(output_source, 'w') as stubs:
++    stubs.write("""
++// Copyright (c) 2015-2024 Vector 35 Inc
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files (the "Software"), to
++// deal in the Software without restriction, including without limitation the
++// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
++// sell copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
++// IN THE SOFTWARE.
++
++// Based on BinExport
++
++// Copyright 2011-2024 Google LLC
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     https://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++#define BINARYNINJACORE_LIBRARY
++#include "binaryninjacore.h"
++#undef BINARYNINJACORE_LIBRARY
++
++extern "C" {
++""")
++
++    with open(options.core_header, 'r') as header:
++        header_conts = header.read()
++    
++    # Quick preprocess of comments in case we have commented defs
++    header_conts = re.sub(r'//.*\n', '\n', header_conts)
++
++    # Pull out all core api functions to generate stubs
++    for match in re.finditer(
++        r'(?m:)\t(BINARYNINJACOREAPI [^;]*);',
++        header_conts
++    ):
++        group = match.group(1)
++
++        # Void functions don't have a return (TODO: breaks if we ever return a fn ptr)
++        void_group = re.search(r'(?m:)BINARYNINJACOREAPI\s+void\s+.*', group)
++        if void_group is not None:
++            stubs.write(f'{match.group(1)} {{ }}\n')
++        else:
++            stubs.write(f'{match.group(1)} {{ return {{ }}; }}\n')
++
++    stubs.write("""
++}
++    """)
+\ No newline at end of file
+-- 
+2.43.3
+
