@@ -29,17 +29,17 @@ jobs:
             name: ubuntu
           }
         version:
-        #- v3.3.3996
+        #- name: v3.3.3996
         #  patch-file: ../.github/workflows/3.5_0001-Support-building-plugins-without-an-install.patch
-        #- v3.4.4271-stable
+        #- name: v3.4.4271-stable
         #  patch-file: ../.github/workflows/3.5_0001-Support-building-plugins-without-an-install.patch
-        #- v3.5.4526-stable
+        #- name: v3.5.4526-stable
         #  patch-file: ../.github/workflows/3.5_0001-Support-building-plugins-without-an-install.patch
-        #- v4.0.4958-stable
+        #- name: v4.0.4958-stable
         #  patch-file: ../.github/workflows/4.0_0001-Support-building-plugins-without-an-install.patch
-        - v4.1.5747-stable
+        - name: v4.1.5747-stable
           patch-file: ../.github/workflows/4.1_0001-Support-building-plugins-without-an-install.patch
-        - dev
+        - name: dev
           patch-file: ../.github/workflows/4.1_0001-Support-building-plugins-without-an-install.patch
     steps:
     - uses: actions/checkout@v3
